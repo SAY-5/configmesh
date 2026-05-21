@@ -1,5 +1,5 @@
-configmesh-server
-configmesh-client
+/configmesh-server
+/configmesh-client
 *.test
 coverage.out
 coverage.html
