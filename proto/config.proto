@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package configmesh.v1;
+
+option go_package = "github.com/SAY-5/configmesh/proto/configmeshv1;configmeshv1";
+
+// Config is the server-side surface for ConfigMesh.
+// Put/Get/Delete/List are unary control-plane RPCs.
+// Subscribe is a bidi stream: clients send a Watch message describing
+// keys and their last-known versions, then receive ConfigUpdate events
+// as values change server-side.
+// Evaluate runs server-side feature-flag evaluation for a (flag, context).
+service Config {
+  rpc Put(PutRequest) returns (PutResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  rpc List(ListRequest) returns (ListResponse);
+  rpc Subscribe(stream SubscribeRequest) returns (stream ConfigUpdate);
+  rpc Evaluate(EvaluateRequest) returns (EvaluateResponse);
+}
+
+message PutRequest {
+  string client_id = 1;
+  string key = 2;
+  bytes value = 3;
+}
+
+message PutResponse {
+  uint64 version = 1;
+}
+
+message GetRequest {
+  string client_id = 1;
+  string key = 2;
+}
+
+message GetResponse {
+  bool exists = 1;
+  uint64 version = 2;
+  bytes value = 3;
+  bool deleted = 4;
+}
+
+message DeleteRequest {
+  string client_id = 1;
+  string key = 2;
+}
+
+message DeleteResponse {
+  uint64 version = 1;
+}
+
+message ListRequest {
+  string client_id = 1;
+  string prefix = 2;
+}
+
+message ListResponse {
+  repeated string keys = 1;
+}
+
+// SubscribeRequest carries a client_id and a watch list. The stream
+// is bidi so the client can update its watch set without reconnecting.
+message SubscribeRequest {
+  string client_id = 1;
+  repeated string keys = 2;
+  // Optional. The version of each key the client already has cached.
+  // The server replays anything newer on stream open / watch update.
+  map<string, uint64> last_known_versions = 3;
+}
+
+message ConfigUpdate {
+  string key = 1;
+  uint64 version = 2;
+  bytes value = 3;
+  bool deleted = 4;
+}
+
+message EvaluateRequest {
+  string client_id = 1;
+  string flag_key = 2;
+  string user_id = 3;
+  map<string, string> context = 4;
+}
+
+message EvaluateResponse {
+  bool enabled = 1;
+  uint64 flag_version = 2;
+  string reason = 3;
+}
