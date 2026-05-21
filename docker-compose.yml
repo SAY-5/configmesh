@@ -1,0 +1,30 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 1s
+      retries: 10
+
+  configmesh:
+    build: .
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      CONFIGMESH_REDIS_ADDR: redis:6379
+      CONFIGMESH_LISTEN: ":9090"
+    ports:
+      - "9090:9090"
+
+  sample-client:
+    build: .
+    depends_on:
+      - configmesh
+    entrypoint: ["/app/configmesh-server"]
+    command: ["-mode=sample-client", "-server=configmesh:9090"]
+    profiles: ["sample"]
