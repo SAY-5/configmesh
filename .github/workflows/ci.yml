@@ -86,7 +86,7 @@ jobs:
           tar -xzf /tmp/kc.tgz -C /tmp
           sudo install /tmp/kubeconform /usr/local/bin/kubeconform
       - name: validate manifests
-        run: kubeconform -strict -summary -schema-location default k8s/
+        run: kubeconform -strict -summary -schema-location default deploy/k8s/
 
   build:
     runs-on: ubuntu-latest
