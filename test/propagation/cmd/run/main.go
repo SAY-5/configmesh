@@ -31,12 +31,22 @@ func main() {
 	cfg.Writes = *writes
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
+	if err := runOnce(ctx, cfg, *out); err != nil {
+		// Allow deferred cancel() above to run before exiting.
+		fmt.Fprintln(os.Stderr, err)
+		_ = testutil.CloseShared
+		os.Exit(1)
+	}
+	_ = testutil.CloseShared
+}
+
+func runOnce(ctx context.Context, cfg propagation.Config, out string) error {
 	r, err := propagation.Run(ctx, cfg)
 	if err != nil {
-		log.Fatalf("propagation: %v", err)
+		return fmt.Errorf("propagation: %w", err)
 	}
-	if err := propagation.WriteResultFile(*out, r); err != nil {
-		log.Fatalf("write result: %v", err)
+	if err := propagation.WriteResultFile(out, r); err != nil {
+		return fmt.Errorf("write result: %w", err)
 	}
 	fmt.Printf("clients=%d writes=%d pairs=%d median=%.2fms p95=%.2fms p99=%.2fms dropped=%d wall=%dms\n",
 		r.Clients, r.Writes, r.Pairs,
@@ -44,7 +54,6 @@ func main() {
 		float64(r.P95Micros)/1000,
 		float64(r.P99Micros)/1000,
 		r.DroppedPairs, r.WallTimeMillis)
-	fmt.Printf("wrote %s\n", *out)
-	_ = testutil.CloseShared
-	os.Exit(0)
+	fmt.Printf("wrote %s\n", out)
+	return nil
 }

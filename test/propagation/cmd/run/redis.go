@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"time"
 
@@ -14,6 +14,17 @@ func startRedis() string {
 	if os.Getenv("TESTCONTAINERS_RYUK_DISABLED") == "" {
 		_ = os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 	}
+	addr, err := startRedisOnce()
+	if err != nil {
+		// Bare Fprintln + os.Exit so callers can still defer cleanup outside
+		// startRedis; here we have no outer deferred state to lose.
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	return addr
+}
+
+func startRedisOnce() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	req := testcontainers.ContainerRequest{
@@ -27,15 +38,15 @@ func startRedis() string {
 		Started:          true,
 	})
 	if err != nil {
-		log.Fatalf("start redis: %v", err)
+		return "", fmt.Errorf("start redis: %w", err)
 	}
 	host, err := c.Host(ctx)
 	if err != nil {
-		log.Fatalf("redis host: %v", err)
+		return "", fmt.Errorf("redis host: %w", err)
 	}
 	port, err := c.MappedPort(ctx, "6379/tcp")
 	if err != nil {
-		log.Fatalf("redis port: %v", err)
+		return "", fmt.Errorf("redis port: %w", err)
 	}
-	return host + ":" + port.Port()
+	return host + ":" + port.Port(), nil
 }
