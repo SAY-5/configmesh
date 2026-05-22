@@ -32,7 +32,7 @@ jobs:
             echo "::warning::proto/configmeshv1 differs from regenerated output; this can happen across protoc-gen-go versions"
             git diff --stat -- proto/configmeshv1
           fi
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.1.6
           args: --timeout=5m
