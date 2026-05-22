@@ -28,15 +28,19 @@ func main() {
 	cfg := propagation.DefaultConfig(addr)
 	cfg.Clients = *clients
 	cfg.Writes = *writes
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-	if err := runOnce(ctx, cfg, *out); err != nil {
-		// Allow deferred cancel() above to run before exiting.
+	// Run in a helper so the deferred cancel() does not race with os.Exit.
+	if err := runWithTimeout(cfg, *out, 5*time.Minute); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		_ = testutil.CloseShared
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic // helper above already drained deferred state.
 	}
 	_ = testutil.CloseShared
+}
+
+func runWithTimeout(cfg propagation.Config, out string, d time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
+	return runOnce(ctx, cfg, out)
 }
 
 func runOnce(ctx context.Context, cfg propagation.Config, out string) error {
